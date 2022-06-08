@@ -1,0 +1,566 @@
+---
+title: "FinalProject"
+author: "cliu08"
+date: "2021/11/28"
+output: word_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+
+```{r cars}
+summary(cars)
+```
+
+## Including Plots
+
+You can also embed plots, for example:
+
+```{r pressure, echo=FALSE}
+plot(pressure)
+```
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+
+```{r}
+.libPaths("D:/IST707")
+setwd("D:/IST707")
+```
+
+
+
+```{r}
+#install.packages('arules')
+#install.packages('arulesViz')
+#install packages
+#install.packages("readr")
+#install.packages("dplyr")
+#install.packages("plyr")
+library(readr)
+library(dplyr)
+library(arules)
+library(plyr)
+library(arules)
+library(ggplot2)
+library(arulesViz)
+```
+
+
+```{r}
+#install.packages("janitor")
+library(janitor)
+library(dplyr)
+library(rsample)  # data splitting
+library(dplyr)    # data transformation
+library(ggplot2)  # data visualization
+library(caret)    # implementing with caret
+library(naivebayes) # naive bayes package
+```
+
+```{r}
+car99 <- read.csv("D:/IST707/used_car_prices.csv")
+```
+
+```{r}
+summary(car99)
+head(car99)
+class(car99)
+str(car99)
+```
+
+
+
+```{r}
+#remove NA value
+car99 = na.omit(car99)
+
+```
+
+
+```{r}
+#remove duplicated value
+car98<- car99[!duplicated(car99),]
+```
+
+
+```{r}
+car98[1,]
+
+```
+
+```{r}
+
+
+car98 <- car98[-which(car98$make == ""), ]
+car98 <- car98[-which(car98$model == ""), ]
+car98 <- car98[-which(car98$body == ""), ]
+car98 <- car98[-which(car98$transmission == ""), ]
+car97 <- car98[-which(car98$color == ""), ]
+
+
+```
+
+
+```{r}
+car96 <- car97[,-(5:7),drop = FALSE]  
+
+```
+
+
+```{r}
+View(car96)
+summary(car96)
+str(car96)
+```
+
+```{r}
+car96$condition <- as.numeric(car96$condition)
+car96$odometer <- as.numeric(car96$odometer)
+#car96$mmr <- as.numeric(car96$mmr)
+car96$sellingprice <- as.numeric(car96$sellingprice)
+```
+
+```{r}
+
+#convert data to transaction 
+#condition 1-5
+car96$condition <- cut(car96$condition, breaks = c(0,1,2,3,4,4.5,5),
+              labels=c("very poor","poor","neutral","good","very good","excellent"))
+
+```
+min_cod <- min(car96$condition)
+max_cod <- max(car96$condition)
+bins = 5 
+width=(max_cod - min_cod)/bins;
+car96$condition = cut(car96$condition, breaks=seq(min_cod, max_cod, width))
+
+
+```{r}
+#5000 mile
+car96$odometer <- cut(car96$odometer, breaks = c(0,10000,30000,50000,75000,100000,150000,Inf),
+              labels=c("<10000 miles","10000-30000 miles","30000-50000 miles","50000-75000 miles","75000-100000 miles","100000-150000 miles",">150000 miles"))
+
+
+```
+min_od <- min(car96$odometer,na.rm = TRUE)
+max_od <- max(car96$odometer,na.rm = TRUE)
+bins2 = 200 
+width2=(max_od - min_od)/bins2;
+car96$odometer = cut(car96$odometer, breaks=seq(min_od, max_od, width2))
+
+```{r}
+#2000 dollar
+#car96$mmr <- cut(car96$mmr, breaks = c(0,8000,23000,40000,60000,Inf),
+             # labels=c("MMR_Scooter","MMR_Student Car","MMR_Family Car","MMR_Business Car","MMR_Luxury Car"))
+```
+min_mmr <- min(car96$mmr,na.rm = TRUE)
+max_mmr <- max(car96$mmr,na.rm = TRUE)
+bins3 =  90
+width3=(max_mmr - min_mmr)/bins3;
+car96$mmr = cut(car96$mmr, breaks=seq(min_mmr, max_mmr, width3))
+
+```{r}
+car96$sellingprice <- cut(car96$sellingprice, 
+                          breaks = c(0,7000,15000,20000,25000,30000,35000,40000,50000,60000,Inf),
+              labels=c("<7000","7000-15000","15000-20000","20000-25000","25000-30000","30000-35000","35000-40000","40000-50000","50000-60000",">60000"))
+#2000dollar
+#Manheim Market Report
+```
+min_SP <- min(car96$sellingprice, na.rm = TRUE)
+max_SP <- max(car96$sellingprice, na.rm = TRUE)
+bins4 =  120
+width4=(max_SP - min_SP)/bins4;
+car96$sellingprice = cut(car96$sellingprice, breaks=seq(min_SP, max_SP, width4))
+
+```{r}
+car96$锘縴earmade <- cut(car96$锘縴earmade, 
+                          breaks = c(0,1990,2000,2006,2012,Inf),
+              labels=c("90s","00s","200 to 2006","2006 to 2012","Recently made"))
+
+```
+
+```{r}
+#car96$make=factor(car96$make)
+#car96$model=factor(car96$model)
+#car96$body=factor(car96$body)
+#car96$color=factor(car96$color)
+#car96$sell_month=factor(car96$sell_month)
+#car96$sell_year=factor(car96$sell_year)
+
+
+```
+
+
+```{r}
+summary(car96)
+```
+
+
+```{r}
+car96 <- car96[,-11,drop = FALSE]  
+car96 <- car96[,-10,drop = FALSE]
+car96 <- car96[,-(7:8),drop = FALSE]
+#car96 <- car96[,-7,drop = FALSE]
+car95 <- car97
+car94 <- car96
+#car95$mmr <- as.data.frame(car95$mmr)
+```
+
+```{r}
+
+```
+
+
+```{r}
+ggplot(car94, aes(x = condition)) +
+  geom_bar(fill = "orange" ,colour="blue")
+
+```
+
+```{r}
+car95$sellingprice <- as.numeric(car95$sellingprice)
+hist(car95$sellingprice, col = 'orange',main = 'Selling_Price', xlab = 'Price($)')
+```
+
+
+```{r}
+# install.packages(arules)
+# install.packages(arulesViz)
+library(arules)
+library(arulesViz)
+
+```
+
+```{r}
+ggplot(car94, aes(x =锘縴earmade)) +
+  geom_bar(fill = 'orange', colour = 'blue', bins=2)
+```
+
+```{r}
+#ggplot(car94, aes(x = mmr)) +
+  #geom_bar(fill = 'orange', colour = 'blue', bins=2)
+```
+
+
+
+
+```{r}
+
+
+```
+
+
+```{r}
+set.seed(101)
+sample_car <- sample.int(n = nrow(car96), size = floor(.75*nrow(car96)), replace = F)
+car_train9 <- car96[sample_car, ]
+car_test9  <- car96[-sample_car, ]
+
+```
+
+```{r}
+library(e1071)
+
+```
+
+```{r}
+nb=naiveBayes(sellingprice~., data = car_train9, laplace = 1, na.action = na.pass)
+
+```
+
+
+```{r}
+
+pred=predict(nb, newdata=car_test9)
+```
+
+```{r}
+# conver some numeric variables to factors
+car93 <- car96 %>%
+  mutate(
+    锘縴earmade = factor(锘縴earmade),
+    make = factor(make),
+    model = factor(model),
+    body = factor(body),
+    condition = factor(condition),
+    odometer = factor(odometer)
+  )
+
+
+```
+
+
+```{r}
+car93 %>% 
+  select(锘縴earmade, make , model, body,condition,odometer) %>% 
+  gather(metric, value) %>% 
+  ggplot(aes(value, fill = metric)) + 
+  geom_density(show.legend = FALSE) + 
+  facet_wrap(~ metric, scales = "free")
+
+```
+
+
+
+
+```{r}
+# create response and feature data
+features9 <- setdiff(names(car93), "pred_sellingprice")
+x <- car93[, features9]
+y <- car93$sellingprice
+
+# set up 5-fold cross validation procedure
+train_control9 <- trainControl(
+  method = "cv", 
+  number = 3
+  )
+
+# more advanced option, run 5 fold cross validation 10 times
+train_control_adv9 <- trainControl(
+  method = "repeatedcv", 
+  number = 3,
+  repeats = 10
+  )
+
+# train model
+nb.m19 <- train(
+  x = x,
+  y = y,
+  method = "naive_bayes",
+  trControl = train_control_adv9
+  )
+
+# results
+confusionMatrix(nb.m19)
+
+```
+
+
+
+tune
+```{r}
+# set up 3-fold cross validation procedure
+train_control8 <- trainControl(
+  method = "cv", 
+  number = 3
+  )
+
+# more advanced option, run 3 fold cross validation 10 times
+train_control_adv8 <- trainControl(
+  method = "repeatedcv", 
+  number = 3,
+  repeats = 10
+  )
+
+# set up tuning grid
+search_grid <- expand.grid(usekernel = c(TRUE, FALSE),
+                         laplace = c(0, 1), 
+                         adjust = c(0,1,2))
+
+# train model
+nb.m2 <- train(
+  x = x,
+  y = y,
+  method = "naive_bayes",
+  trControl = train_control_adv8,
+  tuneGrid = search_grid
+  )
+
+```
+Verify the performance and test on testing data
+
+```{r}
+# top 5 modesl
+nb.m2$results %>% 
+  top_n(5, wt = Accuracy) %>%
+  arrange(desc(Accuracy))
+
+# results for best model
+confusionMatrix(nb.m2)
+
+pred8 <- predict(nb.m2, newdata = car_test9)
+confusionMatrix(pred8, car_test9$sellingprice)
+
+```
+
+svm
+
+```{r}
+set.seed(101)
+sample_car8 <- sample.int(n = nrow(car96), size = floor(.0*nrow(car96)), replace = F)
+car_train8 <- car96[sample_car8, ]
+#car_test9  <- car96[-sample_car, ]
+
+```
+
+
+```{r}
+search_grid9 = expand.grid(C = seq(0, 2, length = 10))
+
+# set up 3-fold cross validation procedure
+train_control7 <- trainControl(
+  method = "cv", 
+  number = 3
+  )
+
+# more advanced option, run 5 fold cross validation 10 times
+train_control_adv7 <- trainControl(
+  method = "repeatedcv", 
+  number = 3,
+  repeats = 10
+  )
+
+
+svm.m1 = train(sellingprice~., data = car_train8, 
+      method = "svmLinear", 
+      trControl = train_control7,
+      tuneGrid = search_grid9,
+      na.action = na.pass
+      )
+
+# top 5 modesl
+svm.m1$results %>% 
+  top_n(5, wt = Accuracy) %>%
+  arrange(desc(Accuracy))
+
+# results for best model
+confusionMatrix(svm.m1)
+```
+
+```{r}
+
+
+```
+
+```{r}
+search_grid7 = expand.grid(k = c(5, 7, 9, 11, 13, 15, 17, 19, 21, 23, 25))
+
+# set up 3-fold cross validation procedure
+train_control7 <- trainControl(
+  method = "cv", 
+  number = 3
+  )
+
+# more advanced option, run 5 fold cross validation 10 times
+train_control_adv7 <- trainControl(
+  method = "repeatedcv", 
+  number = 3,
+  repeats = 10
+  )
+
+# train model
+knn <- train(sellingprice~ .,
+  data = car_train8,
+  method = "knn",
+  trControl = train_control7,
+  tuneGrid = search_grid7
+  )
+
+```
+
+Verify the performance and test on testing data
+
+```{r}
+# top 5 modesl
+knn$results %>% 
+  top_n(5, wt = Accuracy) %>%
+  arrange(desc(Accuracy))
+
+# results for best model
+confusionMatrix(knn)
+```
+RF
+```{r}
+
+# for reproduciblity
+set.seed(123)
+
+# default RF model
+m1 <- randomForest(
+  formula = sellingprice~ .,
+  data = car_train8,
+  ntree = 500,
+  mtry  = 2
+)
+
+m1
+
+plot(m1)
+```
+
+```{r}
+search_grid5 = expand.grid(.mtry = (1:5)) 
+
+# set up 3-fold cross validation procedure
+train_control5 <- trainControl(
+  method = "cv", 
+  number = 3
+  )
+
+# more advanced option, run 5 fold cross validation 10 times
+train_control_adv5 <- trainControl(
+  method = "repeatedcv", 
+  number = 3,
+  repeats = 10
+  )
+
+#new_titanic_train$Survived = factor(new_titanic_train$Survived)
+
+rf.m1 = train(sellingprice~., data = car_train8, 
+      method = "rf",
+      metric = 'Accuracy',
+      trControl = train_control5,
+      tuneGrid = search_grid5)
+
+# top 5 modesl
+rf.m1$results %>% 
+  top_n(5, wt = Accuracy) %>%
+  arrange(desc(Accuracy))
+
+# results for best model
+confusionMatrix(rf.m1)
+```
+
+```{r}
+
+
+```
+
+
+```{r}
+
+
+```
+
+
+```{r}
+
+
+```
+
+
+```{r}
+
+
+```
+
+
+
+
+```{r}
+test111 <- read.csv("D:/IST707/pred_test111.csv")
+
+pred99=predict(nb, newdata=test111)
+
+pred99
+```
+
+
+
